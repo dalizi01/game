@@ -101,6 +101,40 @@
                     </div>
                 </div>
 
+                <!-- 账号（云服务：登录 + 战绩） -->
+                <div class="bg-gray-50 rounded-lg p-5 shadow-sm">
+                    <h2 class="text-lg font-semibold mb-3 flex items-center">
+                        <i class="fa-solid fa-user mr-2 text-primary"></i>账号
+                    </h2>
+
+                    <div id="accountGuest" style="display:none">
+                        <p class="text-xs text-gray-500 mb-3 leading-relaxed">登录后每局结果会存到云端，可以随时查看自己的战绩。未登录也能正常对局。</p>
+                        <button id="loginBtn" class="w-full bg-primary hover:bg-primary/90 text-white py-2.5 px-4 rounded-lg font-medium btn-hover text-sm">
+                            <i class="fa-solid fa-right-to-bracket mr-2"></i>登录 / 注册
+                        </button>
+                    </div>
+
+                    <div id="accountUser" style="display:none">
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-600">已登录</span>
+                            <span id="cloudUserLabel" class="font-mono text-gray-700">—</span>
+                        </div>
+                        <div class="mt-3 flex gap-2">
+                            <button id="statsBtn" class="flex-1 bg-primary/80 hover:bg-primary text-white py-2 rounded-lg text-sm font-medium btn-hover">
+                                <i class="fa-solid fa-chart-simple mr-1"></i>我的战绩
+                            </button>
+                            <button id="logoutBtn" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg text-sm font-medium btn-hover">
+                                <i class="fa-solid fa-arrow-right-from-bracket mr-1"></i>退出
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="accountCloudOff" style="display:none">
+                        <p class="text-xs text-gray-500 leading-relaxed">云服务只在本应用的发布域名下可用（服务端做来源校验），在这里打开时战绩功能会关闭：</p>
+                        <p id="cloudDomain" class="text-xs text-primary font-mono break-all mt-1.5">—</p>
+                    </div>
+                </div>
+
                 <div class="bg-gray-50 rounded-lg p-5 shadow-sm">
                     <h2 class="text-lg font-semibold mb-3 flex items-center">
                         <i class="fa-solid fa-crown mr-2 text-primary"></i>游戏规则
@@ -181,6 +215,10 @@
                                     <div id="roomList" class="flex flex-wrap gap-1.5 max-h-24 overflow-auto"></div>
                                 </div>
                                 <p id="onlineHint" class="text-xs text-gray-500 mt-2 leading-relaxed"></p>
+                                <div id="recentWrap" class="mt-3" style="display:none">
+                                    <p class="text-xs text-gray-500 mb-1">最近结束的对局</p>
+                                    <div id="recentList" class="space-y-1 text-xs text-gray-600"></div>
+                                </div>
                             </div>
 
                             <div id="onlineRoom" style="display:none">
@@ -258,13 +296,91 @@
         <div id="toastBody" class="bg-gray-900/90 text-white text-sm px-4 py-2 rounded-lg shadow-lg"></div>
     </div>
 
+    <!-- 登录 / 注册：手机号验证码 + 微信 -->
+    <div id="authModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[58] hidden">
+        <div class="bg-white rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl">
+            <div class="flex items-start justify-between mb-4">
+                <div>
+                    <h3 class="text-lg font-bold">登录 / 注册</h3>
+                    <p class="text-xs text-gray-500 mt-1">登录后对局结果会保存到云端</p>
+                </div>
+                <button id="authClose" class="text-gray-400 hover:text-gray-600 text-2xl leading-none px-1">&times;</button>
+            </div>
+
+            <label class="block text-sm font-medium text-gray-700 mb-1">手机号</label>
+            <div class="flex gap-2">
+                <input id="phoneInput" type="tel" inputmode="numeric" maxlength="11" autocomplete="tel" placeholder="11 位手机号"
+                       class="flex-1 w-0 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
+                <button id="sendCodeBtn" class="shrink-0 bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 rounded-md text-sm font-medium btn-hover disabled:opacity-50 disabled:cursor-not-allowed">获取验证码</button>
+            </div>
+            <p id="phoneError" class="text-xs text-red-500 mt-1" style="display:none"></p>
+
+            <label class="block text-sm font-medium text-gray-700 mb-1 mt-3">验证码</label>
+            <input id="otpInput" type="text" inputmode="numeric" maxlength="8" autocomplete="one-time-code" placeholder="短信验证码"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
+
+            <button id="phoneSubmitBtn" class="w-full mt-4 bg-primary hover:bg-primary/90 text-white py-2.5 rounded-lg font-medium btn-hover disabled:opacity-50 disabled:cursor-not-allowed">登录 / 注册</button>
+
+            <p id="authError" class="text-xs text-red-500 mt-2" style="display:none"></p>
+
+            <div class="flex items-center gap-3 my-4">
+                <span class="flex-1 h-px bg-gray-200"></span>
+                <span class="text-xs text-gray-400">或</span>
+                <span class="flex-1 h-px bg-gray-200"></span>
+            </div>
+
+            <button id="wechatBtn" class="w-full bg-[#07C160] hover:bg-[#06AD56] text-white py-2.5 rounded-lg font-medium btn-hover">
+                <i class="fa-brands fa-weixin mr-2"></i>微信登录
+            </button>
+            <p class="text-xs text-gray-400 mt-3 leading-relaxed">首次用手机号登录会自动注册。微信登录需要在本应用的发布域名下完成。</p>
+        </div>
+    </div>
+
+    <!-- 我的战绩 -->
+    <div id="statsModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[58] hidden">
+        <div class="bg-white rounded-xl p-6 max-w-lg w-full mx-4 shadow-2xl">
+            <div class="flex items-start justify-between mb-4">
+                <h3 class="text-lg font-bold">我的战绩</h3>
+                <button id="statsClose" class="text-gray-400 hover:text-gray-600 text-2xl leading-none px-1">&times;</button>
+            </div>
+
+            <div class="grid grid-cols-4 gap-2 text-center mb-4">
+                <div class="bg-gray-50 rounded-lg py-2"><div id="statTotal" class="text-xl font-bold text-primary">0</div><div class="text-xs text-gray-500">总场次</div></div>
+                <div class="bg-gray-50 rounded-lg py-2"><div id="statWins" class="text-xl font-bold text-green-600">0</div><div class="text-xs text-gray-500">胜</div></div>
+                <div class="bg-gray-50 rounded-lg py-2"><div id="statLosses" class="text-xl font-bold text-gray-500">0</div><div class="text-xs text-gray-500">负</div></div>
+                <div class="bg-gray-50 rounded-lg py-2"><div id="statDraws" class="text-xl font-bold text-gray-400">0</div><div class="text-xs text-gray-500">平</div></div>
+            </div>
+
+            <div id="statsList" class="space-y-1.5 max-h-72 overflow-auto"></div>
+
+            <div class="flex items-center justify-between mt-4">
+                <button id="statsPrev" class="text-sm px-3 py-1.5 rounded-md bg-gray-200 hover:bg-gray-300 text-gray-700 btn-hover disabled:opacity-40 disabled:cursor-not-allowed">上一页</button>
+                <span id="statsPage" class="text-xs text-gray-500">—</span>
+                <button id="statsNext" class="text-sm px-3 py-1.5 rounded-md bg-gray-200 hover:bg-gray-300 text-gray-700 btn-hover disabled:opacity-40 disabled:cursor-not-allowed">下一页</button>
+            </div>
+            <p id="statsError" class="text-xs text-red-500 mt-2" style="display:none"></p>
+        </div>
+    </div>
+
     <script>
         /* 联机服务地址：
            - 同源部署时留空字符串即可（本页面由联机服务托管时走这条，先探测 /api/ping）
            - 静态托管（如 GitHub Pages）跨域调用时，填联机服务的绝对地址
            页面会自动探测：同源能通就用同源，否则回退到下面这个地址。 */
         const ONLINE_FALLBACK = 'https://gomoku-online-53041.app.workbuddy.host';
+
+        /* WorkBuddy 云服务配置（publicConfig，可安全出现在前端代码里：
+           publishableKey 只标识应用、本身不带权限，服务端会做来源校验）。
+           注意：云服务强制校验来源域名，只在本应用的发布域名下可用。 */
+        const CLOUD_CONFIG = {
+            endpoint: 'https://gomoku-online-53041.app.workbuddy.host',
+            oauthRelayBaseUrl: 'https://www.workbuddy.cn/v2/as/genie-baas/oauth',
+            publishableKey: 'wbpk_k2SEqlDRqdvtHFjkGDIRh3_x07yEVWus6cDuDoEfFSAtJ3fk38qPL2s',
+        };
     </script>
+
+    <!-- 云服务 SDK（单文件页面、无构建步骤，走 CDN 形式） -->
+    <script src="https://cdn.jsdelivr.net/npm/@tencent-ai/workbuddy-cloud-sdk@dev/lib/index.global.js"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -352,6 +468,38 @@
             const reqReject = document.getElementById('reqReject');
             const toastEl = document.getElementById('toast');
             const toastBody = document.getElementById('toastBody');
+
+            /* ---------------- 云服务相关 DOM ---------------- */
+            const accountGuest = document.getElementById('accountGuest');
+            const accountUser = document.getElementById('accountUser');
+            const accountCloudOff = document.getElementById('accountCloudOff');
+            const cloudUserLabel = document.getElementById('cloudUserLabel');
+            const cloudDomain = document.getElementById('cloudDomain');
+            const loginBtn = document.getElementById('loginBtn');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const statsBtn = document.getElementById('statsBtn');
+            const recentWrap = document.getElementById('recentWrap');
+            const recentList = document.getElementById('recentList');
+            const authModal = document.getElementById('authModal');
+            const authClose = document.getElementById('authClose');
+            const phoneInput = document.getElementById('phoneInput');
+            const sendCodeBtn = document.getElementById('sendCodeBtn');
+            const otpInput = document.getElementById('otpInput');
+            const phoneSubmitBtn = document.getElementById('phoneSubmitBtn');
+            const phoneError = document.getElementById('phoneError');
+            const authError = document.getElementById('authError');
+            const wechatBtn = document.getElementById('wechatBtn');
+            const statsModal = document.getElementById('statsModal');
+            const statsClose = document.getElementById('statsClose');
+            const statsList = document.getElementById('statsList');
+            const statsPageEl = document.getElementById('statsPage');
+            const statsPrev = document.getElementById('statsPrev');
+            const statsNext = document.getElementById('statsNext');
+            const statsError = document.getElementById('statsError');
+            const statTotal = document.getElementById('statTotal');
+            const statWins = document.getElementById('statWins');
+            const statLosses = document.getElementById('statLosses');
+            const statDraws = document.getElementById('statDraws');
 
             /* ============================================================
              *  联机层：HTTP 轮询 + version 版本号
@@ -623,8 +771,21 @@
                         net.shownResultKey = key;
                         showWinModal(st.draw ? 0 : st.winner);
                     }
+                    // 只有真的下过这局才记账（重进已结束的房间不重复记）
+                    if (sawGameInProgress) {
+                        recordMatch({
+                            mode: 'online',
+                            myColor: net.color,
+                            winner: st.draw ? 0 : (st.winner || 0),
+                            moveCount: st.moveCount,
+                            durationSec: gameTime,
+                            roomId: net.roomId,
+                        });
+                    }
                 } else {
+                    if (st.status === 'playing') sawGameInProgress = true;
                     net.shownResultKey = null;
+                    matchRecorded = false;
                 }
             }
 
@@ -636,6 +797,7 @@
                 net.version = -1;
                 net.shownResultKey = null;
                 net.busy = false;
+                sawGameInProgress = false;
                 try { localStorage.setItem('gomoku.room.' + d.roomId, d.token); } catch (e) {}
                 stopLobbyPolling();
                 updateQueryRoom(d.roomId);
@@ -728,6 +890,8 @@
                 net.shownResultKey = null;
                 net.busy = false;
                 net.movePending = false;
+                matchRecorded = false;
+                sawGameInProgress = false;
 
                 clearTimeout(aiTimer);
                 aiTimer = null;
@@ -746,6 +910,7 @@
                 updateOverlay();
                 startLobbyPolling();
                 lobbyTick();
+                loadRecentMatches();
             }
 
             async function netMove(row, col) {
@@ -858,6 +1023,411 @@
                     } catch (e) { /* 座位失效，走重新加入 */ }
                 }
                 await netJoin(id);
+            }
+
+            /* ============================================================
+             *  云服务层：WorkBuddy 云服务（数据库 + 用户登录）
+             *
+             *  职责划分（刻意如此）：
+             *   - 云数据库 = 每个用户的持久化战绩。它是用户私有数据，
+             *     靠 RLS 做行级隔离，天生适合「谁的战绩谁看」。
+             *   - 本机 Node 服务 = 房间 / 匹配 / 落子同步。这是短生命周期的
+             *     共享实时状态，需要可信服务端裁决，不适合放进按用户隔离的库。
+             *
+             *  注意：云服务强制校验来源域名，只在本应用的发布域名下可用。
+             *  在其它来源（如 GitHub Pages）打开时会明确提示，而不是静默失败。
+             * ============================================================ */
+            let cloudClient = null;
+            let cloudUser = null;
+            let cloudStatus = 'init';     // init | ready | off-origin | no-sdk
+            let pendingPhoneOtp = null;   // { phone, verificationId, isExistingUser }
+            let codeSending = false;
+            let codeCooldownTimer = null;
+            let loginSubmitting = false;
+            let statsPageIndex = 0;
+            const STATS_PAGE_SIZE = 10;
+            let matchRecorded = false;
+            // 本页面会话里是否真的经历过「对局进行中」。
+            // 用来防止：刷新页面 / 重新打开已结束房间的邀请链接时，
+            // 一进来就处于 finished 状态，被误判成「刚打完这一局」而重复记账。
+            let sawGameInProgress = false;
+
+            function initCloud() {
+                if (location.origin !== CLOUD_CONFIG.endpoint) {
+                    cloudStatus = 'off-origin';
+                    return;
+                }
+                const g = window.WorkBuddyCloud;
+                if (!g || typeof g.createWorkBuddyCloud !== 'function') {
+                    cloudStatus = 'no-sdk';
+                    return;
+                }
+                try {
+                    cloudClient = g.createWorkBuddyCloud({
+                        endpoint: CLOUD_CONFIG.endpoint,
+                        oauthRelayBaseUrl: CLOUD_CONFIG.oauthRelayBaseUrl,
+                        publishableKey: CLOUD_CONFIG.publishableKey,
+                    });
+                    cloudStatus = 'ready';
+                } catch (e) {
+                    cloudClient = null;
+                    cloudStatus = 'no-sdk';
+                }
+            }
+
+            // 会话对象在不同版本里可能是 session 本身、session.user 或 user
+            function pickCloudUser(data) {
+                if (!data || typeof data !== 'object') return null;
+                if (data.user && typeof data.user === 'object' && (data.user.id || data.user.uid || data.user.sub)) {
+                    return data.user;
+                }
+                if (data.id || data.uid || data.sub) return data;
+                return null;
+            }
+
+            function renderAccount() {
+                const off = (cloudStatus === 'off-origin' || cloudStatus === 'no-sdk');
+                accountGuest.style.display = (!off && !cloudUser) ? 'block' : 'none';
+                accountUser.style.display = (!off && cloudUser) ? 'block' : 'none';
+                accountCloudOff.style.display = off ? 'block' : 'none';
+                if (off) {
+                    cloudDomain.textContent = (cloudStatus === 'no-sdk')
+                        ? '（云服务 SDK 未加载成功，请检查网络后刷新）'
+                        : CLOUD_CONFIG.endpoint;
+                }
+                if (cloudUser) {
+                    const raw = String(cloudUser.id || cloudUser.uid || cloudUser.sub || '');
+                    cloudUserLabel.textContent = raw ? raw.slice(0, 10) + '…' : '已登录';
+                }
+            }
+
+            async function refreshCloudUser() {
+                if (!cloudClient) { cloudUser = null; renderAccount(); return; }
+                try {
+                    const res = await cloudClient.auth.getSession();
+                    cloudUser = (res && !res.error) ? pickCloudUser(res.data) : null;
+                } catch (e) {
+                    cloudUser = null;
+                }
+                renderAccount();
+            }
+
+            /* ---------------- 登录界面 ---------------- */
+            function setPhoneError(msg) {
+                phoneError.textContent = msg || '';
+                phoneError.style.display = msg ? 'block' : 'none';
+            }
+            function setAuthError(msg) {
+                authError.textContent = msg || '';
+                authError.style.display = msg ? 'block' : 'none';
+            }
+            function setStatsError(msg) {
+                statsError.textContent = msg || '';
+                statsError.style.display = msg ? 'block' : 'none';
+            }
+
+            function openAuthModal() {
+                setAuthError('');
+                setPhoneError('');
+                authModal.classList.remove('hidden');
+                setTimeout(() => phoneInput.focus(), 50);
+            }
+            function closeAuthModal() { authModal.classList.add('hidden'); }
+
+            function updateSendBtn() {
+                sendCodeBtn.disabled = codeSending || !!codeCooldownTimer;
+            }
+
+            function startCooldown(seconds) {
+                let left = seconds;
+                clearInterval(codeCooldownTimer);
+                sendCodeBtn.textContent = left + 's 后重发';
+                codeCooldownTimer = setInterval(() => {
+                    left -= 1;
+                    if (left <= 0) {
+                        clearInterval(codeCooldownTimer);
+                        codeCooldownTimer = null;
+                        sendCodeBtn.textContent = '获取验证码';
+                    } else {
+                        sendCodeBtn.textContent = left + 's 后重发';
+                    }
+                    updateSendBtn();
+                }, 1000);
+                updateSendBtn();
+            }
+
+            // 「获取验证码」只负责发码，把验证凭据留在 pendingPhoneOtp 里
+            async function sendPhoneCode() {
+                if (!cloudClient) { setAuthError('云服务不可用'); return; }
+                const phone = phoneInput.value.trim();
+                if (!/^1\d{10}$/.test(phone)) { setPhoneError('请输入正确的 11 位手机号'); return; }
+                setPhoneError('');
+                setAuthError('');
+                if (codeSending || codeCooldownTimer) return;
+
+                codeSending = true;
+                updateSendBtn();
+                try {
+                    // 手机号原样传入，不做 +86 拼接（SDK 自己会规范化）
+                    const sent = await cloudClient.auth.sendOtp({ phone });
+                    if (sent.error) {
+                        setAuthError(sent.error.message || '验证码发送失败，请稍后再试');
+                        return;
+                    }
+                    pendingPhoneOtp = {
+                        phone,
+                        verificationId: sent.data.verificationId,
+                        isExistingUser: sent.data.isExistingUser,
+                    };
+                    startCooldown(60);
+                    otpInput.value = '';
+                    otpInput.focus();
+                    toast('验证码已发送');
+                } catch (e) {
+                    setAuthError('网络异常，验证码未发送');
+                } finally {
+                    codeSending = false;
+                    updateSendBtn();
+                }
+            }
+
+            // 「登录 / 注册」只负责校验已收到的码，绝不重新发码
+            async function submitPhoneLogin() {
+                if (!cloudClient) { setAuthError('云服务不可用'); return; }
+                const phone = phoneInput.value.trim();
+                const pending = pendingPhoneOtp;
+                if (!pending || pending.phone !== phone) {
+                    setAuthError('请先获取该手机号的验证码');
+                    return;
+                }
+                const token = otpInput.value.trim();
+                if (!token) { setAuthError('请输入收到的验证码'); return; }
+                if (loginSubmitting) return;
+
+                loginSubmitting = true;
+                phoneSubmitBtn.disabled = true;
+                setAuthError('');
+                try {
+                    const done = await cloudClient.auth.verifyOtp({
+                        phone: pending.phone,
+                        verificationId: pending.verificationId,
+                        isExistingUser: pending.isExistingUser,
+                        token,
+                    });
+                    if (done.error) {
+                        setAuthError(done.error.message || '验证码不正确或已过期');
+                        return;
+                    }
+                    pendingPhoneOtp = null;
+                    otpInput.value = '';
+                    closeAuthModal();
+                    await refreshCloudUser();
+                    toast('登录成功');
+                } catch (e) {
+                    setAuthError('网络异常，登录未完成');
+                } finally {
+                    loginSubmitting = false;
+                    phoneSubmitBtn.disabled = false;
+                }
+            }
+
+            async function doWechatLogin() {
+                if (!cloudClient) { setAuthError('云服务不可用'); return; }
+                setAuthError('');
+                try {
+                    const { data, error } = await cloudClient.auth.signInWithOAuth({
+                        provider: 'wechat',
+                        // 回调必须落在站点根路径，子路径会 404
+                        redirectTo: location.origin,
+                    });
+                    if (error) { setAuthError(error.message || '微信登录暂不可用'); return; }
+                    if (data && data.url) location.assign(data.url);
+                    else setAuthError('微信登录暂不可用');
+                } catch (e) {
+                    setAuthError('微信登录失败，请重试');
+                }
+            }
+
+            // 必须无条件在启动时执行，且早于任何登录守卫
+            async function handleWechatCallback() {
+                if (!cloudClient) return;
+                try {
+                    const { data: session, error } = await cloudClient.auth.handleWechatWebCallback();
+                    if (error) {
+                        toast('微信登录失败：' + (error.message || '未知错误'), 4000);
+                        return;
+                    }
+                    if (session) {
+                        // code/state 是一次性的，必须立刻从地址栏清掉；
+                        // 但要保留 ?room=xxx，别把邀请进房参数一起删了
+                        const u = new URL(location.href);
+                        u.searchParams.delete('code');
+                        u.searchParams.delete('state');
+                        history.replaceState(null, '', u.toString());
+                        toast('微信登录成功');
+                    }
+                } catch (e) { /* 地址栏没有 code 时不是错误 */ }
+            }
+
+            async function doSignOut() {
+                if (!cloudClient) return;
+                try { await cloudClient.auth.signOut(); } catch (e) {}
+                cloudUser = null;
+                renderAccount();
+                toast('已退出登录');
+            }
+
+            /* ---------------- 对局记录 ---------------- */
+            async function recordMatch(info) {
+                if (!cloudClient || matchRecorded) return;
+                matchRecorded = true;
+                try {
+                    const row = {
+                        mode: info.mode,
+                        my_color: info.myColor,
+                        winner: info.winner,
+                        move_count: info.moveCount || 0,
+                        duration_sec: info.durationSec || 0,
+                    };
+                    if (info.roomId) row.room_id = String(info.roomId);
+                    // 不传 owner_id：由 owner_id DEFAULT auth.uid() 和 RLS 决定归属
+                    const { error } = await cloudClient.database.from('gomoku_matches').insert(row);
+                    if (error) {
+                        console.warn('[cloud] 对局记录写入失败', error.code || '', error.message || '');
+                        return;
+                    }
+                    if (info.mode === 'online') loadRecentMatches();
+                } catch (e) {
+                    console.warn('[cloud] 对局记录写入异常');
+                }
+            }
+
+            async function loadRecentMatches() {
+                if (!cloudClient) { recentWrap.style.display = 'none'; return; }
+                try {
+                    const { data, error } = await cloudClient.database
+                        .from('gomoku_matches')
+                        .select('room_id, winner, move_count')
+                        .eq('mode', 'online')
+                        .order('created_at', { ascending: false })
+                        .limit(6);
+                    if (error || !Array.isArray(data) || data.length === 0) {
+                        recentWrap.style.display = 'none';
+                        return;
+                    }
+                    recentList.textContent = '';
+                    data.forEach((r) => {
+                        const line = document.createElement('div');
+                        line.className = 'flex justify-between';
+                        const a = document.createElement('span');
+                        a.className = 'truncate';
+                        a.textContent = '房间 ' + (r.room_id || '—') + ' · ' + (r.move_count || 0) + ' 步';
+                        const b = document.createElement('span');
+                        b.className = 'shrink-0 ml-2 text-gray-400';
+                        b.textContent = Number(r.winner) === 0 ? '平局' : (Number(r.winner) === 1 ? '黑胜' : '白胜');
+                        line.appendChild(a);
+                        line.appendChild(b);
+                        recentList.appendChild(line);
+                    });
+                    recentWrap.style.display = 'block';
+                } catch (e) {
+                    recentWrap.style.display = 'none';
+                }
+            }
+
+            /* ---------------- 我的战绩 ---------------- */
+            function openStatsModal() {
+                statsPageIndex = 0;
+                setStatsError('');
+                statsModal.classList.remove('hidden');
+                loadStats();
+            }
+            function closeStatsModal() { statsModal.classList.add('hidden'); }
+
+            function renderStatsList(list) {
+                statsList.textContent = '';
+                if (!list.length) {
+                    const p = document.createElement('p');
+                    p.className = 'text-sm text-gray-400 text-center py-8';
+                    p.textContent = statsPageIndex === 0
+                        ? '还没有对局记录，下完一局就会自动存到云端'
+                        : '没有更多记录了';
+                    statsList.appendChild(p);
+                } else {
+                    list.forEach((r) => {
+                        const row = document.createElement('div');
+                        row.className = 'flex items-center justify-between text-sm bg-gray-50 rounded-lg px-3 py-2';
+
+                        const left = document.createElement('div');
+                        left.className = 'flex items-center gap-2 min-w-0';
+                        const dot = document.createElement('span');
+                        dot.className = 'inline-block w-3 h-3 rounded-full shrink-0 ' +
+                            (Number(r.my_color) === 1 ? 'bg-black' : 'bg-white border border-gray-400');
+                        const txt = document.createElement('span');
+                        txt.className = 'text-gray-600 truncate';
+                        txt.textContent = (r.mode === 'ai' ? '人机' : '联机') +
+                            ' · ' + (r.room_id ? '房间 ' + r.room_id : '本地') +
+                            ' · ' + (r.move_count || 0) + ' 步';
+                        left.appendChild(dot);
+                        left.appendChild(txt);
+
+                        const w = Number(r.winner);
+                        const mine = Number(r.my_color);
+                        const label = w === 0 ? '平' : (w === mine ? '胜' : '负');
+                        const right = document.createElement('span');
+                        right.className = 'font-medium shrink-0 ml-2 ' +
+                            (label === '胜' ? 'text-green-600' : (label === '负' ? 'text-gray-500' : 'text-gray-400'));
+                        let when = '';
+                        if (r.created_at) {
+                            const d = new Date(r.created_at);
+                            when = ' · ' + (d.getMonth() + 1) + '/' + d.getDate() + ' ' +
+                                String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+                        }
+                        right.textContent = label + when;
+
+                        row.appendChild(left);
+                        row.appendChild(right);
+                        statsList.appendChild(row);
+                    });
+                }
+                statsPageEl.textContent = '第 ' + (statsPageIndex + 1) + ' 页';
+                statsPrev.disabled = statsPageIndex === 0;
+                statsNext.disabled = list.length < STATS_PAGE_SIZE;
+            }
+
+            async function loadStats() {
+                if (!cloudClient) { setStatsError('云服务不可用'); return; }
+                if (!cloudUser) { setStatsError('请先登录'); return; }
+                setStatsError('');
+
+                try {
+                    const st = await cloudClient.database.rpc('gomoku_my_stats');
+                    if (st.error) {
+                        setStatsError('战绩加载失败：' + (st.error.message || '未知错误'));
+                    } else {
+                        const s = st.data || {};
+                        statTotal.textContent = s.total || 0;
+                        statWins.textContent = s.wins || 0;
+                        statLosses.textContent = s.losses || 0;
+                        statDraws.textContent = s.draws || 0;
+                    }
+                } catch (e) {
+                    setStatsError('网络异常，战绩加载失败');
+                }
+
+                try {
+                    const rows = await cloudClient.database.rpc('gomoku_my_matches', {
+                        lim: STATS_PAGE_SIZE,
+                        off: statsPageIndex * STATS_PAGE_SIZE,
+                    });
+                    if (rows.error) {
+                        setStatsError('对局记录加载失败：' + (rows.error.message || '未知错误'));
+                        return;
+                    }
+                    renderStatsList(Array.isArray(rows.data) ? rows.data : []);
+                } catch (e) {
+                    setStatsError('网络异常，对局记录加载失败');
+                }
             }
 
             /* ============================================================
@@ -1256,6 +1826,17 @@
                 statusText.textContent = '游戏结束 - ' + text;
                 newGameBtn.textContent = net.active ? '再来一局' : '开始新游戏';
 
+                // 人机对战结束也记一笔；本地双人没有「我」，不记录
+                if (!net.active && isAgainstAI) {
+                    recordMatch({
+                        mode: 'ai',
+                        myColor: 1,
+                        winner: winner || 0,
+                        moveCount: moveHistory.length,
+                        durationSec: gameTime,
+                    });
+                }
+
                 const subtitle = winModal.querySelector('.text-gray-600');
                 if (subtitle) {
                     subtitle.textContent = net.active
@@ -1307,6 +1888,7 @@
                 lastMove = null;
                 winCells = null;
                 hoverCell = null;
+                matchRecorded = false;
 
                 drawBoard();
                 updateGameStatus();
@@ -1735,6 +2317,24 @@
                 if (t) netAction(t.replace('-request', '-reject'));
             });
 
+            /* ---------------- 云服务事件 ---------------- */
+            loginBtn.addEventListener('click', openAuthModal);
+            authClose.addEventListener('click', closeAuthModal);
+            authModal.addEventListener('click', (e) => { if (e.target === authModal) closeAuthModal(); });
+            sendCodeBtn.addEventListener('click', sendPhoneCode);
+            phoneSubmitBtn.addEventListener('click', submitPhoneLogin);
+            wechatBtn.addEventListener('click', doWechatLogin);
+            phoneInput.addEventListener('input', () => setPhoneError(''));
+            otpInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitPhoneLogin(); });
+            logoutBtn.addEventListener('click', doSignOut);
+            statsBtn.addEventListener('click', openStatsModal);
+            statsClose.addEventListener('click', closeStatsModal);
+            statsModal.addEventListener('click', (e) => { if (e.target === statsModal) closeStatsModal(); });
+            statsPrev.addEventListener('click', () => {
+                if (statsPageIndex > 0) { statsPageIndex -= 1; loadStats(); }
+            });
+            statsNext.addEventListener('click', () => { statsPageIndex += 1; loadStats(); });
+
             /* ============================================================
              *  7. 初始化：尺寸自适应（容器变化 / 系统缩放 / 窗口尺寸都会重算）
              * ============================================================ */
@@ -1748,6 +2348,15 @@
             if (dprMedia.addEventListener) {
                 dprMedia.addEventListener('change', resizeCanvas);
             }
+
+            /* ============================================================
+             *  云服务初始化：
+             *  微信回调必须无条件在启动时执行，且早于任何登录守卫，
+             *  否则带 ?code= 回到根路径时会被守卫打断，而 code 是一次性的。
+             * ============================================================ */
+            initCloud();
+            renderAccount();
+            handleWechatCallback().then(() => refreshCloudUser());
 
             resizeCanvas();
             updateGameStatus();
