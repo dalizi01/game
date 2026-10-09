@@ -563,7 +563,7 @@
                 try {
                     const data = await netFetch('/api/lobby');
                     lobbyStatsEl.textContent = '在线 ' + data.online + ' · 等待 ' + data.waiting + ' · 对局 ' + data.playing;
-                    renderRoomList((data.list || []).filter(r => r.status === 'waiting' && r.players === 1));
+                    renderRoomList((data.list || []).filter(r => r.status === 'waiting' && r.players === 1 && r.online >= 1));
                 } catch (e) {
                     lobbyStatsEl.textContent = '联机服务不可用';
                     roomListWrap.style.display = 'none';
